@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es-es">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual Safety | Portal de Simulación</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- Firebase Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // CONFIGURACIÓN FINAL CORREGIDA
+    const firebaseConfig = {
+      apiKey: "AIzaSyANaUA6pRZ5i2zrGrydYfr253EGCbBRcCg",
+      authDomain: "webexample-cbd69.firebaseapp.com",
+      databaseURL: "https://webexample-cbd69-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "webexample-cbd69",
+      storageBucket: "webexample-cbd69.firebasestorage.app",
+      messagingSenderId: "428607837147",
+      appId: "1:428607837147:web:fc3bb2bd8c7905e846cdfe"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // Obtener la instancia de firestore
+    const db = firebase.firestore();
+
+    // Aplicar settings solo si no se han aplicado antes
+    db.settings({
+      experimentalForceLongPolling: true,
+      merge: true // ESTO elimina la advertencia del log
+    });
+  </script>
+
+  <style>
+    :root {
+      --primary-red: #d32f2f;
+      --dark-bg: #0f1115;
+      --glass-bg: rgba(25, 27, 33, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: var(--dark-bg);
+      background-image: radial-gradient(circle at 50% 0%, rgba(211, 47, 47, 0.15), transparent 60%);
+      font-family: 'Inter', sans-serif;
+      color: #f1f1f1;
+      overflow: hidden;
+    }
+
+    /* Navbar */
+    .header-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      padding: 0 40px;
+      background: rgba(15, 17, 21, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+      box-sizing: border-box;
+      z-index: 10;
+      transition: all 0.3s ease;
+    }
+
+    .company-logo {
+      height: 32px;
+      margin-right: 16px;
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1));
+    }
+
+    .logo-text {
+      font-weight: 600;
+      letter-spacing: 2px;
+      font-size: 1.1rem;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    /* Layout */
+    #app-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+      padding-top: 40px;
+      box-sizing: border-box;
+    }
+
+    /* Container & Glass Effect */
+    #unity-container {
+      position: relative;
+      padding: 12px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #unity-container:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    }
+
+    #unity-canvas {
+      width: 1152px;
+      /* 16:9 Aspect Ratio */
+      height: 648px;
+      background: #0a0b0d;
+      border-radius: 10px;
+      display: block;
+    }
+
+    /* Loading Overlay */
+    #unity-loading-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      background: rgba(10, 11, 13, 0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      transition: opacity 0.5s ease;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary-red);
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 24px;
+      box-shadow: 0 0 15px rgba(211, 47, 47, 0.4);
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #unity-progress-bar-empty {
+      width: 250px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    #unity-progress-bar-full {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff4b4b, var(--primary-red));
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(211, 47, 47, 0.8);
+      transition: width 0.2s ease;
+    }
+
+    .loading-text {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Footer Controls */
+    #unity-footer-controls {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      gap: 12px;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    #unity-container:hover #unity-footer-controls,
+    #unity-footer-controls.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .control-btn {
+      width: 44px;
+      height: 44px;
+      background: rgba(25, 27, 33, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .control-btn:hover {
+      background: rgba(45, 48, 59, 0.9);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    .control-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* Mobile styling */
+    @media (max-width: 1200px) {
+      #unity-canvas {
+        width: 960px;
+        height: 540px;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      #unity-canvas {
+        width: 800px;
+        height: 450px;
+      }
+    }
+
+    /* Responsive Mobile Device */
+    .unity-mobile #app-wrapper {
+      padding-top: 0;
+    }
+
+    .unity-mobile .header-bar {
+      display: none;
+    }
+
+    .unity-mobile #unity-container {
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .unity-mobile #unity-canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+    }
+
+    .unity-mobile #unity-footer-controls {
+      bottom: 20px;
+      right: 20px;
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header-bar">
+    <!-- Mantenemos el logo referenciado -->
+    <img src="TemplateData/LogoEmpresa.png" alt="Logo" class="company-logo" onerror="this.style.display='none'">
+    <div class="logo-text">VISUAL SAFETY</div>
+  </div>
+
+  <div id="app-wrapper">
+    <div id="unity-container">
+
+      <div id="unity-loading-overlay">
+        <div class="spinner"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+        <p class="loading-text">Iniciando simulación...</p>
+      </div>
+
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+      <div id="unity-footer-controls">
+        <button id="unity-fullscreen-button" class="control-btn" title="Pantalla Completa">
+          <svg viewBox="0 0 24 24">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var canvas = document.querySelector("#unity-canvas");
+    var loadingOverlay = document.querySelector("#unity-loading-overlay");
+    var progressBarFull = document.querySelector("#unity-progress-bar-full");
+    var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+
+    var buildUrl = "Build";
+    var loaderUrl = buildUrl + "/WebBuild.loader.js";
+    var config = {
+      dataUrl: buildUrl + "/WebBuild.data.unityweb",
+      frameworkUrl: buildUrl + "/WebBuild.framework.js.unityweb",
+      codeUrl: buildUrl + "/WebBuild.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "Visual Safety",
+      productName: "WebExample",
+      productVersion: "1.0",
+    };
+
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      document.body.classList.add("unity-mobile");
+    }
+
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        progressBarFull.style.width = 100 * progress + "%";
+      }).then((unityInstance) => {
+        window.unityInstance = unityInstance; // EXPOSICIÓN GLOBAL REQUERIDA POR JSLIB
+
+        loadingOverlay.style.opacity = "0";
+        setTimeout(() => {
+          loadingOverlay.style.display = "none";
+        }, 500); // Wait for fade out
+
+        fullscreenButton.onclick = () => {
+          unityInstance.SetFullscreen(1);
+        };
+      }).catch((message) => {
+        alert("Error cargando la aplicación: " + message);
+      });
+    };
+
+    // Handle fallback if loader script fails to load
+    script.onerror = () => {
+      document.querySelector(".loading-text").innerText = "Error cargando recursos";
+      document.querySelector(".spinner").style.borderColor = "rgba(255,255,255,0.1)";
+      document.querySelector(".spinner").style.borderTopColor = "#f44336";
+      document.querySelector(".spinner").style.animation = "none";
+    };
+
+    document.body.appendChild(script);
+  </script>
+</body>
+
+</html>
